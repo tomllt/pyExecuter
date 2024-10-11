@@ -38,7 +38,7 @@ type GopoolExecutor struct {
 
 // NewGopoolExecutor 创建一个GopoolExecutor实例
 func NewGopoolExecutor(poolSize int, queue *TaskQueue) *GopoolExecutor {
-	pool := gopool.NewGoPool(poolSize)
+	pool := gopool.NewGoPool(poolSize, gopool.WithMinWorkers(poolSize/2))
 	return &GopoolExecutor{
 		pool:  pool,
 		Queue: queue,
@@ -52,6 +52,7 @@ func (e *GopoolExecutor) Start(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
+				e.pool.Release()
 				return
 			default:
 				e.mu.Lock()
@@ -63,14 +64,17 @@ func (e *GopoolExecutor) Start(ctx context.Context) error {
 						if result.Error != nil {
 							if task.RetryCount > 0 {
 								task.RetryCount--
-								e.Queue.AddTask(*task) // 任务失败，重新添加到队列
+								e.Queue.AddTask(task) // 任务失败，重新添加到队列
 							} else {
 								// 记录失败日志
 								fmt.Printf("Task %s failed after retries: %v\n", task.ID, result.Error)
 							}
 						}
-						return nil, result.Error
+						return result, result.Error
 					})
+				} else {
+					// 如果队列为空，等待一段时间再尝试
+					time.Sleep(100 * time.Millisecond)
 				}
 			}
 		}
@@ -86,7 +90,11 @@ func (e *GopoolExecutor) ExecuteTask(task *Task) Result {
 	}
 
 	executor := &SecurePythonExecutor{}
-	executor.SetupEnvironment("task_env") // 设置虚拟环境
+	err := executor.SetupEnvironment(task.ID) // 使用任务ID作为虚拟环境名称
+	if err != nil {
+		result.Error = fmt.Errorf("failed to setup environment: %v", err)
+		return result
+	}
 
 	output, err := executor.Execute(task.Script, task.Args, task.Timeout)
 
@@ -99,4 +107,13 @@ func (e *GopoolExecutor) ExecuteTask(task *Task) Result {
 	}
 
 	return result
+}
+
+// GetStats 获取执行器的统计信息
+func (e *GopoolExecutor) GetStats() map[string]interface{} {
+	return map[string]interface{}{
+		"running_workers": e.pool.Running(),
+		"total_workers":   e.pool.GetWorkerCount(),
+		"queue_size":      e.Queue.Size(),
+	}
 }

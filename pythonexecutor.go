@@ -21,8 +21,12 @@ type SecurePythonExecutor struct {
 
 // SetupEnvironment 设置Python虚拟环境
 func (p *SecurePythonExecutor) SetupEnvironment(envName string) error {
-	// 这里应该实现创建或激活指定的虚拟环境的逻辑
-	// 简单起见，我们只是设置环境名称
+	// 创建虚拟环境
+	cmd := exec.Command("python", "-m", "venv", envName)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to create virtual environment: %v", err)
+	}
+
 	p.Environment = envName
 	return nil
 }
@@ -40,8 +44,15 @@ func (p *SecurePythonExecutor) Execute(script string, args []string, timeout tim
 	defer removeTempPythonFile(tmpFile)
 
 	// 准备命令
+	pythonPath := filepath.Join(p.Environment, "bin", "python")
 	cmdArgs := append([]string{tmpFile}, args...)
-	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	cmd := exec.CommandContext(ctx, pythonPath, cmdArgs...)
+
+	// 设置环境变量
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("VIRTUAL_ENV=%s", p.Environment),
+		fmt.Sprintf("PATH=%s:%s", filepath.Join(p.Environment, "bin"), os.Getenv("PATH")),
+	)
 
 	// 设置输出缓冲
 	var out bytes.Buffer
