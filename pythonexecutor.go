@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -71,16 +73,6 @@ func (p *SecurePythonExecutor) Execute(script string, args []string, timeout tim
 
 	return out.String(), nil
 }
-
-import (
-	"bytes"
-	"context"
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"time"
-)
 
 // createTempPythonFile 创建一个临时的Python文件
 func createTempPythonFile(script string) (string, error) {
