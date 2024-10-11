@@ -1,5 +1,8 @@
 # pyExecuter
 
+| English | [中文](README_zh.md) |
+| --- | --- |
+
 pyExecuter is a high-performance Python script execution program based on [devchat-ai/gopool](https://github.com/devchat-ai/gopool). It leverages Go's parallel processing capabilities and Python's flexibility to provide a robust, efficient, and scalable solution for executing Python scripts.
 
 ## Features
