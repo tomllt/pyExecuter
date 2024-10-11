@@ -6,27 +6,27 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/yourusername/pyExecuter"
+	"github.com/tomllt/pyExecuter"
 )
 
 func TestGopoolExecutor(t *testing.T) {
 	// 创建任务队列
 	queue := pyExecuter.NewTaskQueue(100, "FIFO")
-	
+
 	// 创建执行器
 	executor := pyExecuter.NewGopoolExecutor(5, queue)
-	
+
 	// 启动执行器
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	err := executor.Start(ctx)
 	assert.NoError(t, err)
 
 	// 创建测试任务
 	task := &pyExecuter.Task{
-		ID:     "test_task",
-		Script: "print('Hello, World!')",
+		ID:      "test_task",
+		Script:  "print('Hello, World!')",
 		Timeout: 5 * time.Second,
 	}
 
