@@ -61,15 +61,45 @@ func (p *SecurePythonExecutor) Execute(script string, args []string, timeout tim
 	return out.String(), nil
 }
 
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"time"
+)
+
 // createTempPythonFile 创建一个临时的Python文件
 func createTempPythonFile(script string) (string, error) {
-	// 实现创建临时文件的逻辑
-	// 返回文件路径
-	return "", nil
+	// 创建一个临时目录
+	tempDir, err := os.MkdirTemp("", "python_script_")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp directory: %v", err)
+	}
+
+	// 在临时目录中创建一个Python文件
+	tempFile := filepath.Join(tempDir, "script.py")
+	err = os.WriteFile(tempFile, []byte(script), 0600)
+	if err != nil {
+		os.RemoveAll(tempDir) // 清理临时目录
+		return "", fmt.Errorf("failed to write script to temp file: %v", err)
+	}
+
+	return tempFile, nil
 }
 
 // removeTempPythonFile 删除临时的Python文件
 func removeTempPythonFile(filePath string) error {
-	// 实现删除临时文件的逻辑
+	// 获取临时文件所在的目录
+	tempDir := filepath.Dir(filePath)
+
+	// 删除整个临时目录及其内容
+	err := os.RemoveAll(tempDir)
+	if err != nil {
+		return fmt.Errorf("failed to remove temp directory: %v", err)
+	}
+
 	return nil
 }
