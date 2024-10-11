@@ -31,9 +31,9 @@ type Result struct {
 
 // GopoolExecutor GoPool 的任务执行管理器
 type GopoolExecutor struct {
-	pool  *gopool.Pool // 使用 devchat-ai/gopool 提供的池
-	Queue *TaskQueue   // 任务队列
-	mu    sync.Mutex   // 保护任务调度的锁
+	pool  gopool.GoPool // 使用 devchat-ai/gopool 提供的池
+	Queue *TaskQueue    // 任务队列
+	mu    sync.Mutex    // 保护任务调度的锁
 }
 
 // NewGopoolExecutor 创建一个GopoolExecutor实例
