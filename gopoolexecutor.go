@@ -38,7 +38,7 @@ type GopoolExecutor struct {
 
 // NewGopoolExecutor 创建一个GopoolExecutor实例
 func NewGopoolExecutor(poolSize int, queue *TaskQueue) *GopoolExecutor {
-	pool := gopool.NewPool(poolSize)
+	pool := gopool.NewGoPool(poolSize)
 	return &GopoolExecutor{
 		pool:  pool,
 		Queue: queue,
@@ -58,7 +58,7 @@ func (e *GopoolExecutor) Start(ctx context.Context) error {
 				task, err := e.Queue.GetTask() // 获取任务
 				e.mu.Unlock()
 				if err == nil && task != nil {
-					e.pool.Submit(func() {
+					e.pool.AddTask(func() (interface{}, error) {
 						result := e.ExecuteTask(task)
 						if result.Error != nil {
 							if task.RetryCount > 0 {
@@ -69,6 +69,7 @@ func (e *GopoolExecutor) Start(ctx context.Context) error {
 								fmt.Printf("Task %s failed after retries: %v\n", task.ID, result.Error)
 							}
 						}
+						return nil, result.Error
 					})
 				}
 			}
