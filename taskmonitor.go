@@ -12,6 +12,7 @@ type TaskMonitoring struct {
 	EndTime       time.Time     // 任务结束时间
 	Status        string        // 任务当前状态
 	ResourceUsage ResourceUsage // 资源使用情况
+	MonitorActive bool          // 标识是否正在监控任务
 }
 
 // ResourceUsage 资源使用情况
@@ -42,6 +43,8 @@ func NewBasicTaskMonitor() *BasicTaskMonitor {
 
 // StartMonitoring 实现任务开始监控
 func (m *BasicTaskMonitor) StartMonitoring(taskID string) error {
+	m.mu.Lock() // 防止竞态条件
+	defer m.mu.Unlock()
 	if _, exists := m.monitorData[taskID]; exists {
 		return fmt.Errorf("task %s is already being monitored", taskID)
 	}
@@ -49,18 +52,34 @@ func (m *BasicTaskMonitor) StartMonitoring(taskID string) error {
 		TaskID:    taskID,
 		StartTime: time.Now(),
 		Status:    "Running",
+		ResourceUsage: ResourceUsage{
+			CPUUsage:    getCurrentCPUUsage(),
+			MemoryUsage: getCurrentMemoryUsage(),
+			DiskUsage:   getCurrentDiskUsage(),
+		},
+		MonitorActive: true,
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.monitorData, taskID) // 结束监控后清理数据
 	return nil
 }
 
 // StopMonitoring 实现停止监控任务
 func (m *BasicTaskMonitor) StopMonitoring(taskID string) error {
+	m.mu.Lock() // 防止竞态条件
+	defer m.mu.Unlock()
 	monitor, exists := m.monitorData[taskID]
 	if !exists {
 		return fmt.Errorf("task %s is not being monitored", taskID)
 	}
 	monitor.EndTime = time.Now()
-	monitor.Status = "Completed"
+	if err := checkTaskFailure(taskID); err != nil {
+		monitor.Status = "Failed"
+	} else {
+		monitor.Status = "Completed"
+	}
+	monitor.MonitorActive = false
 	return nil
 }
 
