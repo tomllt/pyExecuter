@@ -7,12 +7,12 @@ pyExecuter 是一个基于 [devchat-ai/gopool](https://github.com/devchat-ai/gop
 
 ## 特性
 
-### 1. 并行任务调度
+### 1. 并行任务调度 ✅
 - 利用 devchat-ai/gopool 的 Goroutines 池进行高效的并发任务管理
 - 基于 CPU 和内存资源实现智能任务调度
 - 动态将 Python 脚本任务分配到工作池以最大化资源利用
 
-### 2. 任务队列管理
+### 2. 任务队列管理 ✅
 - 支持基于优先级的任务队列，以执行紧急任务
 - 提供 FIFO 和 LIFO 队列模式，以适应不同的任务处理需求
 - 包含失败任务的自动重试机制
@@ -50,7 +50,7 @@ pyExecuter 是一个基于 [devchat-ai/gopool](https://github.com/devchat-ai/gop
 - 提供统一的结果聚合接口，便于检索和处理
 - 支持回调函数，用于自定义结果处理逻辑
 
-### 10. 高性能 Python 脚本执行接口
+### 10. 高性能 Python 脚本执行接口 ✅
 - 提供灵活的 Python 执行接口，支持动态参数传递
 - 支持动态执行作为字符串传递的 Python 代码
 - 与 Python 虚拟环境集成，实现依赖隔离

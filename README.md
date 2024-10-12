@@ -7,12 +7,12 @@ pyExecuter is a high-performance Python script execution program based on [devch
 
 ## Features
 
-### 1. Parallel Task Scheduling
+### 1. Parallel Task Scheduling ✅
 - Utilizes devchat-ai/gopool's Goroutines pool for efficient concurrent task management
 - Implements intelligent task scheduling based on CPU and memory resources
 - Dynamically allocates Python script tasks to the worker pool for maximum resource utilization
 
-### 2. Task Queue Management
+### 2. Task Queue Management ✅
 - Supports priority-based task queues for urgent task execution
 - Offers both FIFO and LIFO queue modes to suit different task processing needs
 - Includes automatic retry mechanism for failed tasks
@@ -50,7 +50,7 @@ pyExecuter is a high-performance Python script execution program based on [devch
 - Offers a unified result aggregation interface for easy retrieval and processing
 - Supports callback functions for custom result processing logic
 
-### 10. High-performance Python Script Execution Interface
+### 10. High-performance Python Script Execution Interface ✅
 - Provides a flexible Python execution interface with dynamic parameter passing
 - Supports dynamic execution of Python code passed as strings
 - Integrates with Python virtual environments for dependency isolation
