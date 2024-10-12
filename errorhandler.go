@@ -19,15 +19,17 @@ type ErrorHandling interface {
 
 // BasicErrorHandler 简单的错误处理实现
 type BasicErrorHandler struct {
-	retryCount map[string]int // 记录任务的重试次数
-	queue      *TaskQueue     // 用于重新将任务添加到队列
+	MaxRetryCount int           // 最大重试次数
+	retryCount    map[string]int // 记录任务的重试次数
+	queue         *TaskQueue     // 用于重新将任务添加到队列
 }
 
 // NewBasicErrorHandler 创建 BasicErrorHandler 实例
 func NewBasicErrorHandler(maxRetry int, queue *TaskQueue) *BasicErrorHandler {
 	return &BasicErrorHandler{
-		retryCount: make(map[string]int),
-		queue:      queue,
+		MaxRetryCount: maxRetry,
+		retryCount:    make(map[string]int),
+		queue:         queue,
 	}
 }
 
@@ -45,7 +47,7 @@ func (h *BasicErrorHandler) CaptureError(taskID string, err error) error {
 // RetryTask 重试任务
 func (h *BasicErrorHandler) RetryTask(taskID string) error {
 	h.retryCount[taskID]++
-	task, err := h.queue.GetTaskByID(taskID) // 假设有方法可以通过ID获取任务
+	task, err := h.queue.GetTaskByID(taskID) // 通过ID获取任务的逻辑需要实现
 	if err != nil {
 		return fmt.Errorf("failed to retrieve task %s for retry: %v", taskID, err)
 	}

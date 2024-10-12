@@ -71,3 +71,15 @@ func (q *TaskQueue) Size() int {
 	defer q.mu.RUnlock()
 	return len(q.tasks)
 }
+
+func (q *TaskQueue) GetTaskByID(taskID string) (*Task, error) {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+
+	for _, task := range q.tasks {
+		if task.ID == taskID {
+			return task, nil
+		}
+	}
+	return nil, fmt.Errorf("task with ID %s not found", taskID)
+}
