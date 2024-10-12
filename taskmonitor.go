@@ -21,6 +21,17 @@ type ResourceUsage struct {
 	DiskUsage   uint64  // 磁盘使用量
 }
 
+// getResourceUsage 获取当前系统的资源使用情况
+func getResourceUsage() ResourceUsage {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	return ResourceUsage{
+		CPUUsage:    getCPUUsage(),  // 需要实现的 CPU 使用率获取函数
+		MemoryUsage: memStats.Alloc, // 已分配内存
+		DiskUsage:   getDiskUsage(), // 需要实现的磁盘使用率获取函数
+	}
+}
+
 // TaskMonitor 任务监控接口
 type TaskMonitor interface {
 	StartMonitoring(taskID string) error                     // 开始监控某个任务
@@ -46,11 +57,30 @@ func (m *BasicTaskMonitor) StartMonitoring(taskID string) error {
 		return fmt.Errorf("task %s is already being monitored", taskID)
 	}
 	m.monitorData[taskID] = &TaskMonitoring{
-		TaskID:    taskID,
-		StartTime: time.Now(),
-		Status:    "Running",
+		TaskID:        taskID,
+		StartTime:     time.Now(),
+		Status:        "Running",
+		ResourceUsage: getResourceUsage(), // 获取初始的资源使用情况
 	}
+	go m.updateResourceUsage(taskID) // 启动监控更新资源使用情况
+	mu.Lock() 
+	defer mu.Unlock()
 	return nil
+}
+
+// updateResourceUsage 动态更新任务的资源使用情况
+func (m *BasicTaskMonitor) updateResourceUsage(taskID string) {
+	for {
+		time.Sleep(1 * time.Second) // 定期更新资源使用情况
+		m.mu.Lock()
+		monitor, exists := m.monitorData[taskID]
+		if !exists || monitor.Status != "Running" {
+			m.mu.Unlock()
+			break
+		}
+		monitor.ResourceUsage = getResourceUsage() // 更新资源使用情况
+		m.mu.Unlock()
+	}
 }
 
 // StopMonitoring 实现停止监控任务
