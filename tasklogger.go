@@ -38,22 +38,35 @@ func NewFileLogger(logFilePath string) *FileLogger {
 
 // LogTaskStart 记录任务开始
 func (f *FileLogger) LogTaskStart(taskID string, startTime time.Time) error {
-	f.logs[taskID] = append(f.logs[taskID], TaskLog{
-		TaskID:    taskID,
-		StartTime: startTime,
-	})
-	return f.writeToFile(fmt.Sprintf("Task %s started at %s\n", taskID, startTime))
+logEntry := TaskLog{
+    TaskID:    taskID,
+    StartTime: startTime,
+}
+f.logs[taskID] = append(f.logs[taskID], logEntry)
+if err := f.writeToFile(fmt.Sprintf("Task %s started at %s\n", taskID, startTime)); err != nil {
+    return fmt.Errorf("failed to log task start: %v", err)
+}
+return nil
 }
 
 // LogTaskEnd 记录任务结束
 func (f *FileLogger) LogTaskEnd(taskID string, endTime time.Time, output string, err error) error {
 	taskLogs := f.logs[taskID]
-	taskLogs[len(taskLogs)-1].EndTime = endTime
-	taskLogs[len(taskLogs)-1].Output = output
-	if err != nil {
-		taskLogs[len(taskLogs)-1].Error = err.Error()
-	}
-	return f.writeToFile(fmt.Sprintf("Task %s ended at %s with output: %s and error: %v\n", taskID, endTime, output, err))
+taskLog := &taskLogs[len(taskLogs)-1]
+taskLog.EndTime = endTime
+taskLog.Output = output
+if err != nil {
+    taskLog.Error = err.Error()
+}
+f.logs[taskID] = taskLogs  // 确保更新后的日志写回到映射中
+	logMessage := fmt.Sprintf("Task %s ended at %s with output: %s", taskID, endTime, output)
+if err != nil {
+    logMessage += fmt.Sprintf(" and error: %v", err)
+}
+if err := f.writeToFile(logMessage + "\n"); err != nil {
+    return fmt.Errorf("failed to log task end: %v", err)
+}
+return nil
 }
 
 // FetchLogs 获取指定任务的日志
