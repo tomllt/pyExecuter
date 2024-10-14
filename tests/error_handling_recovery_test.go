@@ -1,6 +1,7 @@
 package pyExecuter_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 
 func TestErrorHandling(t *testing.T) {
 	queue := pyExecuter.NewTaskQueue(10, "FIFO")
-	errorHandler := pyExecuter.NewBasicErrorHandler(3, queue)
+	errorHandler := pyExecuter.NewBasicErrorHandler(3, 1*time.Second, queue)
 
 	// 模拟任务执行错误
 	taskID := "error_handling_test_task"
@@ -41,5 +42,5 @@ func TestTaskRecovery(t *testing.T) {
 	// 恢复任务状态
 	recoveredState, err := recovery.RecoverTaskState(taskID)
 	assert.NoError(t, err)
-	assert.Equal(t, "InProgress", recoveredState)
+	assert.Equal(t, state, recoveredState)
 }
