@@ -66,3 +66,91 @@ print("Hello from Python!")
 	assert.Contains(t, output, "Python version:")
 	assert.Contains(t, output, "Hello from Python!")
 }
+
+func TestTaskQueue(t *testing.T) {
+	queue := pyExecuter.NewTaskQueue(10, "FIFO")
+
+	task1 := &pyExecuter.Task{ID: "task1", Priority: 1}
+	task2 := &pyExecuter.Task{ID: "task2", Priority: 2}
+
+	err := queue.AddTask(task1)
+	assert.NoError(t, err)
+	err = queue.AddTask(task2)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 2, queue.Size())
+
+	retrievedTask, err := queue.GetTask()
+	assert.NoError(t, err)
+	assert.Equal(t, "task2", retrievedTask.ID) // Higher priority task should be retrieved first
+
+	retrievedTask, err = queue.GetTask()
+	assert.NoError(t, err)
+	assert.Equal(t, "task1", retrievedTask.ID)
+
+	_, err = queue.GetTask()
+	assert.Error(t, err) // Queue should be empty now
+}
+
+func TestTaskRecovery(t *testing.T) {
+	recovery := pyExecuter.NewTaskRecovery("./test_recovery")
+
+	err := recovery.SaveTaskState("task1", "running")
+	assert.NoError(t, err)
+
+	state, err := recovery.RecoverTaskState("task1")
+	assert.NoError(t, err)
+	assert.Equal(t, "running", state.State)
+
+	err = recovery.PersistStates()
+	assert.NoError(t, err)
+
+	newRecovery := pyExecuter.NewTaskRecovery("./test_recovery")
+	err = newRecovery.LoadStates()
+	assert.NoError(t, err)
+
+	state, err = newRecovery.RecoverTaskState("task1")
+	assert.NoError(t, err)
+	assert.Equal(t, "running", state.State)
+}
+
+func TestTaskMonitor(t *testing.T) {
+	monitor := pyExecuter.NewBasicTaskMonitor()
+
+	err := monitor.StartMonitoring("task1")
+	assert.NoError(t, err)
+
+	time.Sleep(1 * time.Second) // Wait for a bit to simulate task running
+
+	status, err := monitor.GetTaskStatus("task1")
+	assert.NoError(t, err)
+	assert.Equal(t, "Running", status.Status)
+
+	err = monitor.StopMonitoring("task1")
+	assert.NoError(t, err)
+
+	status, err = monitor.GetTaskStatus("task1")
+	assert.NoError(t, err)
+	assert.Equal(t, "Completed", status.Status)
+}
+
+func TestErrorHandler(t *testing.T) {
+	queue := pyExecuter.NewTaskQueue(10, "FIFO")
+	handler := pyExecuter.NewBasicErrorHandler(3, 1*time.Second, queue)
+
+	task := &pyExecuter.Task{ID: "errorTask"}
+	err := queue.AddTask(task)
+	assert.NoError(t, err)
+
+	err = handler.CaptureError("errorTask", assert.AnError)
+	assert.NoError(t, err) // First retry
+
+	err = handler.CaptureError("errorTask", assert.AnError)
+	assert.NoError(t, err) // Second retry
+
+	err = handler.CaptureError("errorTask", assert.AnError)
+	assert.NoError(t, err) // Third retry
+
+	err = handler.CaptureError("errorTask", assert.AnError)
+	assert.Error(t, err) // Should exceed max retry count
+}
