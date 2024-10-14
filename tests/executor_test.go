@@ -93,25 +93,45 @@ func TestTaskQueue(t *testing.T) {
 }
 
 func TestTaskRecovery(t *testing.T) {
-	recovery := pyExecuter.NewTaskRecovery("./test_recovery")
+	// 创建临时目录用于测试
+	tempDir := t.TempDir()
+	
+	recovery := pyExecuter.NewTaskRecovery(tempDir)
 
+	// 测试保存任务状态
 	err := recovery.SaveTaskState("task1", "running")
 	assert.NoError(t, err)
 
+	// 测试恢复任务状态
 	state, err := recovery.RecoverTaskState("task1")
 	assert.NoError(t, err)
 	assert.Equal(t, "running", state.State)
 
+	// 测试持久化状态
 	err = recovery.PersistStates()
 	assert.NoError(t, err)
 
-	newRecovery := pyExecuter.NewTaskRecovery("./test_recovery")
+	// 创建新的 TaskRecovery 实例来测试加载状态
+	newRecovery := pyExecuter.NewTaskRecovery(tempDir)
 	err = newRecovery.LoadStates()
+	assert.NoError(t, err)
+
+	// 验证加载的状态
+	state, err = newRecovery.RecoverTaskState("task1")
+	assert.NoError(t, err)
+	assert.Equal(t, "running", state.State)
+
+	// 测试恢复不存在的任务状态
+	_, err = newRecovery.RecoverTaskState("non_existent_task")
+	assert.Error(t, err)
+
+	// 测试更新任务状态
+	err = newRecovery.SaveTaskState("task1", "completed")
 	assert.NoError(t, err)
 
 	state, err = newRecovery.RecoverTaskState("task1")
 	assert.NoError(t, err)
-	assert.Equal(t, "running", state.State)
+	assert.Equal(t, "completed", state.State)
 }
 
 func TestTaskMonitor(t *testing.T) {
