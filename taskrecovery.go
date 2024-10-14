@@ -24,10 +24,10 @@ type TaskRecovery struct {
 
 // Recovery 任务恢复接口
 type Recovery interface {
-	SaveTaskState(taskID string, state string) error    // 保存任务当前状态
-	RecoverTaskState(taskID string) (TaskState, error)  // 恢复任务之前的状态
-	PersistStates() error                               // 将所有状态持久化到磁盘
-	LoadStates() error                                  // 从磁盘加载所有状态
+	SaveTaskState(taskID string, state string) error   // 保存任务当前状态
+	RecoverTaskState(taskID string) (TaskState, error) // 恢复任务之前的状态
+	PersistStates() error                              // 将所有状态持久化到磁盘
+	LoadStates() error                                 // 从磁盘加载所有状态
 }
 
 // NewTaskRecovery 创建 TaskRecovery 实例
@@ -41,14 +41,14 @@ func NewTaskRecovery(storageDir string) *TaskRecovery {
 // SaveTaskState 保存任务状态
 func (r *TaskRecovery) SaveTaskState(taskID string, state string) error {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	r.taskStates[taskID] = TaskState{
 		State:     state,
 		Timestamp: time.Now(),
 	}
+	r.mu.Unlock()
+
 	fmt.Printf("Task %s state saved: %s\n", taskID, state)
-	
+
 	// 将持久化操作移到锁外部执行
 	return r.persistStates()
 }
@@ -68,10 +68,15 @@ func (r *TaskRecovery) RecoverTaskState(taskID string) (TaskState, error) {
 
 // persistStates 将所有状态持久化到磁盘（内部方法）
 func (r *TaskRecovery) persistStates() error {
+	// 创建一个taskStates的副本，以减少锁定时间
 	r.mu.RLock()
-	data, err := json.Marshal(r.taskStates)
+	taskStatesCopy := make(map[string]TaskState)
+	for k, v := range r.taskStates {
+		taskStatesCopy[k] = v
+	}
 	r.mu.RUnlock()
 
+	data, err := json.Marshal(taskStatesCopy)
 	if err != nil {
 		return fmt.Errorf("failed to marshal task states: %v", err)
 	}
