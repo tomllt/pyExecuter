@@ -48,7 +48,9 @@ func (r *TaskRecovery) SaveTaskState(taskID string, state string) error {
 		Timestamp: time.Now(),
 	}
 	fmt.Printf("Task %s state saved: %s\n", taskID, state)
-	return r.PersistStates()
+	
+	// 将持久化操作移到锁外部执行
+	return r.persistStates()
 }
 
 // RecoverTaskState 恢复任务状态
@@ -64,12 +66,12 @@ func (r *TaskRecovery) RecoverTaskState(taskID string) (TaskState, error) {
 	return state, nil
 }
 
-// PersistStates 将所有状态持久化到磁盘
-func (r *TaskRecovery) PersistStates() error {
+// persistStates 将所有状态持久化到磁盘（内部方法）
+func (r *TaskRecovery) persistStates() error {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	data, err := json.Marshal(r.taskStates)
+	r.mu.RUnlock()
+
 	if err != nil {
 		return fmt.Errorf("failed to marshal task states: %v", err)
 	}
@@ -82,11 +84,13 @@ func (r *TaskRecovery) PersistStates() error {
 	return nil
 }
 
+// PersistStates 将所有状态持久化到磁盘（公开方法）
+func (r *TaskRecovery) PersistStates() error {
+	return r.persistStates()
+}
+
 // LoadStates 从磁盘加载所有状态
 func (r *TaskRecovery) LoadStates() error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	filePath := filepath.Join(r.storageDir, "task_states.json")
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -97,9 +101,14 @@ func (r *TaskRecovery) LoadStates() error {
 		return fmt.Errorf("failed to read task states from file: %v", err)
 	}
 
-	if err := json.Unmarshal(data, &r.taskStates); err != nil {
+	var loadedStates map[string]TaskState
+	if err := json.Unmarshal(data, &loadedStates); err != nil {
 		return fmt.Errorf("failed to unmarshal task states: %v", err)
 	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.taskStates = loadedStates
 
 	return nil
 }
